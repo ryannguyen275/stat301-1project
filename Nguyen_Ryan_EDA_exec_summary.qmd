@@ -1,0 +1,67 @@
+---
+title: "Success in Music: Exploratory Data Analysis"
+subtitle: "Data Science 1 with R (STAT 301-1)"
+author: "Ryan Nguyen"
+date: "December 7, 2022"
+editor: visual
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    code-fold: show
+    link-external-newwindow: true
+    
+execute:
+  warning: false
+  echo: false
+  
+from: markdown+emoji  
+---
+
+## Executive Summary
+
+```{r}
+# Loading Packages & Data
+#| echo: FALSE
+library(tidyverse, quietly = T)
+library(skimr, quietly = T)
+library(lubridate, quietly = T)
+
+spotify_charts <- read_csv("data/processed/spotify_charts.csv", show_col_types = FALSE)
+artists_info <- read_csv("data/processed/artists_info.csv", show_col_types = FALSE)
+```
+
+### Purpose
+
+The purpose of this exploratory data analysis is to dive into and analyze the overall success of music artists through different standards and charts. We hope to uncover any underlying trends, commonalities, and relationships between them in artist and song popularity. We are going to use data visualization and transformation techniques to explore data in a systematic way. Some guiding questions for this analysis are: What artists are leading in our standards (Billboard's Hot 100, Grammy Awards, and Spotify data). Are there any patterns/relationships between them? Across the various standards, who is the most successful musical artist of the 20th century thus far?Are there other factors in music/songs that may create more success? What should be the standard of measuring success of an artist? While we cannot and will not answer each and every one of these questions, they guide our thought process and reasoning throughout. This EDA explores the varying definitions of what is a successful artist, and who is successful based on the industry's various metrics of success.
+
+### Summary
+
+```{r}
+#| echo: false
+artists_info %>%
+  # rearranging so most followers are at the top
+  arrange(desc(followers)) %>%
+  distinct(followers, .keep_all = TRUE) %>% 
+  # selecting only the top 10 observations
+  slice_head(n = 10) %>% 
+  ggplot(aes(x = fct_reorder(artist, followers), y = followers)) +
+  geom_col(color = 'black',
+           fill = 'lightblue') +
+  coord_flip() + 
+  labs(title = "Artists with Most Followers on Spotify",
+       y ="Number of Followers",
+       x = "Artist")
+```
+
+In the Billboard Hot 100 data set, we found that Drake, Taylor Swift, and Rihanna are the top 3 artists whose songs have spent the most amount of time on the charts, while the Glee Cast, Drake, and Taylor Swift are the top 3 artists who has had the most amount of songs hit the charts, overall. The Glee Cast was definitely one of the most shocking parts of this EDA, since they aren't real artists with a modern fanbase, but it makes sense when you think about the amount of songs and albums they have produced. Looking at the Grammys data set, Adele, Eminem, U2, and Alicia Keys lead the pack with the most Grammys won, while Drake and Rihanna are not even on the list of top artists who have won. This was not unpredictable. In the Spotify data set, Ed Sheeran takes the crown for most followers, which is really shocking as his fan base is not super centralized. Although, when it comes to actual streams, Taylor Swift is the leading artist, followed by Drake and Bad Bunny. For most streamed songs on Spotify, Olivia Rodrigo's "good 4 u" has the most with 31.7 million streams.
+
+### Conclusions
+
+When it comes to success as an artist, there can be various avenues to look at. Published by Billboard magazine, the Billboard Hot 100 is a weekly chart that ranks the most popular songs based on sales, radio play, and streams in the United States. Its' pros are it is based on an efficient algorithm and its' weekly release allows artists to really see if their music is popular in real time. The Grammy Awards are arguably the most coveted award in the entire music industry and are voted upon by industry professionals. Its' pros are that it is decided by experts and has high prestige; however, this may neglect the opinions of consumers and is often inaccessible. Finally, Spotify Charts are based on the actions of consumers, and the followers and streams are direct reflections of the consumption of music. However, there are a lot of hidden variables that could impact streams and inactive followers that provide a false sense of success.
+
+When looking at all of these metrics together, one artist definitely stands out as having the consistent success on the Billboard Hot 100, the prestige of Grammy Awards, and the dedicated fan base streaming and following of their music on Spotify: Taylor Swift. While few artists are successful in one or two of these standards, Swift has proven herself to be dominant and present in all three. Artists should look at her career to see what goes into being a successful artist, and some would argue that young artists including Olivia Rodrigo, Conan Gray, Maisie Peters, and more are already doing so. 
+
+This EDA provides a lot of opportunities for further investigation. With our data sets, one could explore Swift's discography specifically, including which of her songs were her biggest hits and when. It would also be interesting to see if there is a common trend between all of her songs that are her most successful. Furthermore, success could also be measured in other ways: ticket sales/revenue, social media following, press coverage, and Q score. Ultimately, success of an artist can not be simply measured nor defined, but data allows us to visualize and analyze the factors, trends, and relations that go into the music industry and gaining success within it. 
+

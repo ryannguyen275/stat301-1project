@@ -1,0 +1,573 @@
+---
+title: "Success in Music: Exploratory Data Analysis"
+subtitle: "Data Science 1 with R (STAT 301-1)"
+author: "Ryan Nguyen"
+date: "December 7, 2022"
+editor: visual
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    code-fold: show
+    link-external-newwindow: true
+    
+execute:
+  warning: false
+  echo: false
+  
+from: markdown+emoji  
+---
+
+```{r}
+# Loading Packages
+#| echo: FALSE
+library(tidyverse, quietly = T)
+library(skimr, quietly = T)
+library(lubridate, quietly = T)
+```
+
+## Introduction & Overview
+
+The goals of this exploratory data analysis is to dive into and analyze the success of music artists through the platforms of various standards and charts, and to uncover any underlying trends, commonalities, and relationships between them in artist and song popularity. We are going to use data visualization and transformation skills to explore data in a systematic way. Some guiding questions for this analysis are: What artists are leading in our standards (Billboard's Hot 100, Grammy Awards, and Spotify data). Across the various standards, who is the most successful musical artist of the 20th century thus far? How has this artist's success changed overtime? Are there other factors in music/songs that may create more success? What should be the standard of measuring success of an artist? While we may not answer each and every one of these questions, they will guide our thought process and reasoning throughout. This EDA will explore the varying definitions of what is a successful artist, and who is successful based on the industry's various metrics of success.
+
+## About The Data Sets
+
+```{r}
+
+spotify_charts <- read_csv("data/processed/spotify_charts.csv", show_col_types = FALSE)
+artists_info <- read_csv("data/processed/artists_info.csv", show_col_types = FALSE)
+billboard_hot <- read_csv("data/processed/billboard_hot.csv", show_col_types = FALSE)
+grammy_awards <- read_csv("data/processed/grammy_awards.csv", show_col_types = FALSE)
+
+```
+
+
+When looking for data sets for this project, I knew I wanted one that had a lot of different opportunities for lots of interesting explorations. Music and pop culture has always been one of my passions, so on Kaggle, I refined my search to arts and entertainment and found these data sets. When doing a broad overview of them, I realized that they were all telling the same story: what artists are in and what artists are out. From there, I noticed the variables each one had in common, including artists and song names, and what each used to rank artists.
+
+There are 4 main data sets that we will be using in this EDA. Throughout the EDA, we will be joining them together at various points to really see different relations.
+
+The first is our `billboard_hot` data set, which includes observations of songs on the Billboard Hot 100, from 2000 to 2019. It contains 10 variables: `artist` (the name of the lead musical artist), `name` (the name of the song that was on the Billboard Hot 100 that date), `weekly_rank` (the position the song held that date), `peak_pos` (the highest position (closest to 1) the song held ever, on any date), `weeks_on_chart` (the number of weeks the song was on the Billboard Hot 100 by that date), `week` (the week of the Billboard Hot 100 for the date), `date` (the date the observation was taken), `genre` (the genre of the song), `writers` (artists with writing credits), and `features` (artist who are featured). The raw data set also included a column for lyrics, which we removed since they aren't relevant in our EDA's context. The data was pulled from Billboard, and can be found [here](https://www.kaggle.com/datasets/danield2255/data-on-songs-from-billboard-19992019).
+
+The next is our `grammy_awards` data set, which includes data from the Recording Academy Grammy Awards regarding albums and songs, from 1999 to 2018. It has five variables: `award` (the name of the award), `year` (which award show year it won), `genre` (genre of album), `name` (name of the album/song that won), and `artist` (name of the artist that won). The raw data set was originally 2 different data sets, one for albums and one for songs, that we combined to create one large data set that would allow us to look at all of the grammys an artist has won, regardless if it was in an album or song category. The data is pulled from the Recording Academy, and can be found [here](https://www.kaggle.com/datasets/danield2255/data-on-songs-from-billboard-19992019). In this dataset, only `artist` is missing a small number of observations, so we are good to proceed.
+
+Third is our `artists_info` data set, which includes relevant information on our artists from Spotify. It has 7 variables: `artist` (the artist name), `followers` (their number of Spotify followers), `genre` (type of music they make), `num_albums` (the number of albums they have on Spotify), `debut` (the year they released their first album), `gender`, and `type` (whether they are a group or solo act). The data is pulled from Spotify, and can be found [here](https://www.kaggle.com/datasets/danield2255/data-on-songs-from-billboard-19992019). `genre`, `gender`, and `type` have some missing observations, but this could be for a variety of reasons: not having a defined genre, not fitting into the gender binary, bands are not all the same gender all the time, and they are not listed as either solo or group act. Nevertheless, these variables are more supplemental in our EDA, so the missingness does not need to be corrected.
+
+The last is our `spotify_charts` data set, which includes Spotify track chart data from 2014 to 2022. It has 10 variables and over 620,000 observations. The variables include `name` (title of the song), `country` (which country the song was charting in), `date` (date of charting), `position` (the rank it reached), `streams` (the number of streams it had that day), `artists` (the name of the artist), and `artist_genres` (the genre of the artist). The raw data set is from Kaggle by Julian Freyberg, is obtained from [https://kworb.net/spotify/](https://www.kaggle.com/datasets/jfreyberg/kworb.net) and the official Spotify API, and can be found [here](https://www.kaggle.com/datasets/jfreyberg/spotify-chart-data). We removed irrelevant columns including `duration` (the duration of the song) and `explicit` (whether or not the song is explicit) because they are irrelevant to the context of our guiding questions, which center around the success of specific artists.
+
+So, we have all of this wonderful, processed data to dive into. Let's begin exploring.
+
+## Billboard Hot 100
+
+### Univariate Analyses
+
+```{r}
+#| echo: false
+billboard_hot %>% 
+  skim()
+```
+
+In this univariate analyses, we're exploring important aspects of the data, including the variation in the variables and any missing data we have. The main variable we will be diving into are the artists, so it is important to note that with all of the data we have, we have nearly 2000 different artists here to explore their success on the Billboard Hot 100. Furthermore, we will be diving into the actual rank, which ranges from 1 to 100, and it is nice that there are no missing values in the rank. However, there appears to be the most missing values in the variable `features`, at over 75,000 observations missing data, which makes sense because not every song has a featured artist.
+
+Let's look at some of the distribution. Out of all of the songs that have hit the Billboard Hot 100 charts from 1999-2019, how many peak at number 1? What's the distribution?
+
+```{r}
+#| echo: false
+billboard_hot %>% 
+  # group by song
+  group_by(name) %>% 
+  # remove duplicates
+  distinct(peak_pos) %>% 
+  # find the actual peak of the song over all time, not just at the singular observations
+  slice_min(order_by = peak_pos) %>% 
+  ggplot(aes(x = peak_pos)) +
+  geom_histogram(stat = "count", color = "black", fill = "lightblue") + 
+  labs(title = "The Distribution of Peak Position on Billboard Hot 100",
+       x = "Peak Position",
+       y = "Count")
+```
+
+
+In the above visualization, we can see that the distribution of the peak position of a song on the Billboard Hot 100 from 1999 to 2019 is right skewed and unimodal, with a peak at 1. This means that a good amount of songs peak close to number 1, with nearly 250 of them peaking at number 1, but a majority of songs never reach number 1. Let's begin looking into artists' presence on the Billboard Hot 100.
+
+### Bivariate Analyses
+
+```{r}
+#| echo: false
+billboard_hot %>%
+  #grouping the observations by artists
+  group_by(artist) %>%
+  #counting how many times an artist and artist combination have been on the billboard hot 100
+  count() %>% 
+  #filtering only artists who have been on it over 600 times
+  filter(n > 600) %>% 
+  ggplot(aes(x = fct_reorder(artist,n), y = n)) +
+  geom_col(color = 'black',
+           fill = 'lightblue') + 
+  # flipping the graph
+  coord_flip() +
+  labs(title = "Most Frequent Artists on the Billboard Hot 100 (1999-2019)",
+       y = "Number of Weeks",
+       x = "Artist Name")
+
+billboard_hot %>%
+  #finding unique songs
+  distinct(name, .keep_all = TRUE) %>% 
+  #grouping the observations by artists
+  group_by(artist) %>%
+  #counting how many times an artist and artist combination have been on the billboard hot 100
+  count() %>% 
+  ungroup() %>% 
+  #filtering only artists who have been on it over 600 times
+  filter(n > 35) %>% 
+  ggplot(aes(x = fct_reorder(artist,n), y = n)) +
+  geom_col(color = 'black',
+           fill = 'lightblue') + 
+  coord_flip() +
+  labs(title = "Artists with Most Songs on the Billboard Hot 100 (1999-2019)",
+       y = "Number of Songs",
+       x = "Artist Name")
+```
+
+With this visualization, we can see what artist most frequented the Billboard Hot 100 from 1999 to June 2019. As we see with this visualization, Drake is the artist who has been on The Billboard Hot 100 the most times, and the only artist who has been on it over 1000 times. In second is Taylor Swift, who is the only other artist besides Drake to appear on the Billboard Hot 100 over 900 times. In third is Rihanna, who is the only artist besides our top two who has been on the Billboard Hot 100 over 750 times. These three lead the pack of artists.
+
+Something I found interesting in this visualization is the number of country artists that appear, including Tim McGraw, Rascal Flatts, Kenny Chesney, Keith Urban, and Brad Paisley. One would hypothesize that it would mostly be pop singers, so it is surprising to see this trend here. When looking at which artists have the greatest number of songs that have been on the Billboard Hot 100, we see that the top artist is not actually an artist, but the cast of Glee, with about 150 songs that have been on the Billboard Hot 100. Disregarding this, Drake is the artist with the most songs on The Billboard Hot 100, and the only singular artist with over 100 songs. In second is Taylor Swift, with a total of 70 songs. Followed by Lil' Wayne with 58. Artists such as Beyonce, Brad Paisley, Chris Brown, and Tim McGraw are also featured on this list.
+
+Something super interesting to note is that Rihanna is not even listed as one of the top artists with the greatest number of songs on the Billboard Hot 100, despite being third in amount of times on the charts. This means that she had less songs, but still great success for those fewer songs.
+
+Something that could be interesting to dive into is if there is a correlation between how many albums (and therefore, how many songs) and the amount of songs an artist has on the Billboard Hot 100. As we see with Rihanna, an artist can have few songs, but still those few songs can spend a long time on the charts. To do this, we needed to merge some data.
+
+```{r}
+#| echo: false
+billboard_hot %>%
+  # grouping the observations by artists
+  group_by(artist) %>%
+  # getting only the top spot
+  filter(weekly_rank == 1) %>% 
+  # counting how many times an artist has been #1 on Billboard Hot 100, could also take weeks on chart and slice the top
+  count() %>% 
+  # filtering only artists who have had a number one hit for over 15 weeks
+  filter(n >= 15) %>% 
+  ggplot(aes(x = fct_reorder(artist, n), y = n)) +
+  geom_col(color = 'black',
+           fill = 'lightblue') + 
+  # flipping the graph
+  coord_flip() +
+  labs(title = "# of Weeks Artists Have Been #1 on Billboard Hot 100 (1999-2019)",
+       y = "Number of Weeks",
+       x = "Artist")
+```
+
+Here, we are not only seeing how many weeks an artist has been on the Billboard Hot 100, but how many weeks an artist has been #1 on the charts. As we can see, Rihanna has the most and the only artist with over 40 weeks. She is followed by Drake, Usher, Beyonce, then Katy Perry. We note that again, Drake seems to be super popular on the Billboard Hot 100, but could there be another factor at play?
+
+### Multivariate Analyses
+
+```{r}
+#| echo: false
+billboard_artists <- billboard_hot %>% 
+  # merging billboard data with artists data
+  inner_join(artists_info, c("artist" = "artist")) %>% 
+  select(artist, name, week, date, num_albums) %>% 
+  # grouping by artists
+  group_by(artist) %>% 
+  mutate(count = n())
+
+billboard_artists %>% 
+  # only artists who have been on the Billboard Hot 100 more than 400 times
+  filter(count > 400) %>% 
+  ggplot(aes(x = num_albums, y = count, color = artist)) +
+  geom_point() + 
+  labs(title = "Number of Albums vs. Number of Weeks on Billboard Hot 100 vs. Artist",
+       x = "Number of Albums",
+       y = "Number of Weeks on Billboard Hot 100")
+```
+
+From this visualiztion, our hypothesis was mostly correct. While Drake and Taylor do lead in the number of weeks on the Billboard Hot 100, they do have 12 and 10 albums out respectively. However, there does not seem to be a strong correlation between the number of albums released and the number of weeks an artist has been on Billboard Hot 100. Additionally, George Strait seems to have an incredibly high number of albums out (over 40) and is no where near Taylor Swift or Drake in the number of weeks spent on Billboard Hot 100. This shows there are obviously other factors at play, including popularity of the song. Let's take a look at how our top artists, Drake, Rihanna, Taylor Swift,and Beyonce, popularity has changed overtime, with their songs that have reached number 1.
+
+```{r}
+#| echo: false
+billboard_hot %>% 
+  filter(artist == "Drake"| artist == "Rihanna"| artist == "Taylor Swift"| artist == "Beyonce") %>%
+  filter(peak_pos == 1) %>% 
+  ggplot(aes(x = date, y = weekly_rank)) +
+  geom_point(aes(color = artist)) +
+  scale_y_reverse() + 
+  labs(title = "Weekly Ranking of Top Artists' Songs that Reached #1 Overtime",
+       x = "Date",
+       y = "Position on Billboard Hot 100",
+       color = "Artist")
+
+```
+With this visualization, we can see that Beyonce has had great success on the Billboard Hot 100 in the earlier part of the time frame, but has not had a number 1 song since 2008. Rihanna remains pretty consistent which is parallel to how she is the artist who has been on the Billboard Hot 100 for the most amount of weeks. Additionally, it looks like Drake and Taylor are very recent in their dominance, with Swift's first song reaching number 1 in 2012, and Drake's first song reaching number one in 2016.
+
+## Grammy Awards
+
+### Bivariate Analysis
+```{r}
+#| echo: false
+grammy_awards %>% 
+  group_by(artist) %>% 
+  count() %>% 
+  #filtering out missing artists data and multiple artists
+  filter(n > 5,
+        !is.na(artist),
+        artist != "Various Artists") %>% 
+  ggplot(aes(x = fct_reorder(artist, n), y=n)) +
+  geom_col(color = 'black',
+           fill = 'lightblue') +
+  coord_flip() +
+  labs(title = "Artists with Most Grammy Wins",
+       x = "Artist",
+       y = "Number of Grammys")
+
+```
+
+Moving onto Grammy Awards with this visualization, we can see what artist has won the most Grammy awards, in the major song and album categories, from 1999 to 2018. By 2018, Adele had the most Grammys, at a total of 12 awards. She is followed by Eminem with a total of 11 awards, then the band U2 and Alicia Keys are tied for third with 9 awards each. Something interesting to note is that there is not a ton of overlap between top Grammy-award-winning artists and Billboard Hot 100 artists. The artists who appear to be towards the top of both lists are Taylor Swift, Eminem, and Beyonce.
+
+### Multivariate Analysis
+
+It could be interesting to see if there is any relationship between the Billboard Hot 100 and the Grammy Awards. For instance, if an artist is dominating the Billboard Hot 100 in a given year, are they more likely to win a Grammy? If an artist won multiple Grammy's that year, are they then, in turn, dominating the Billboard Hot 100?
+
+
+```{r}
+#| echo: false
+# artists who were #1 on Billboard Hot 100 the most each year
+billboard_year2 <- billboard_hot %>% 
+  mutate(year = year(week)) %>% 
+  filter(weekly_rank == 1) %>% 
+  group_by(artist, year) %>% 
+  count() %>% 
+  group_by(year) %>% 
+  slice_max(order_by = n)
+
+# who won the most grammys each year
+most_grammys <- grammy_awards %>% 
+  group_by(artist, year) %>% 
+  filter(!is.na(artist)) %>% 
+  count() %>% 
+  group_by(year) %>% 
+  slice_max(order_by = n)
+  
+# let's create a tibble
+grammy_billboard <- most_grammys %>% 
+  inner_join(billboard_year2, "year") %>% 
+  rename("Artist with Most Grammy Wins" = "artist.x",
+         "Artist with #1 Song On Billboard Hot 100 The Most" = "artist.y") %>% 
+  select(-c(n.x, n.y))
+
+as_tibble(grammy_billboard)
+```
+As we can see with this tibble, after joining our data, it is very rare that the artist who wins the most Grammy Awards in a given year is also the artist who has a #1 song on the Billboard Hot 100 the longest in that given year as well. This illustrates to us that there is not a strong relation between the Grammy Awards and the Billboard Hot 100, so these standards are given differently, and can't normally be used to predict one another. In 1999, Santana won the most Grammy Awards AND had a number 1 song on the Billboard Hot 100 the most weeks, and is the only artist to do so.
+
+## Spotify Charts
+
+### Univariate Analysis
+Heading over to another metric of success, we look to Spotify, one of the leading music streaming platforms that offers a lot of insight regarding followers, streams, downloads, and sharing. Let's take a look at the overall distribution of followers.
+
+```{r}
+#| echo: false
+artists_info %>% 
+  ggplot(aes(x = followers)) +
+  geom_histogram(color = "lightblue") +
+  labs(title = "Distribution of Artist's Spotify Followers", 
+       y = "Count",
+       x = "Number of Followers")
+```
+As we can see, the visualization is incredibly right-skewed, with most artists having less followers on Spotify. Let's zoom in so we can focus on the most popular artists.
+
+```{r}
+#| echo: false
+artists_info %>% 
+  ggplot(aes(x = followers)) +
+  geom_histogram(color = "lightblue") +
+  xlim(1e+07, 6e07) +
+  labs(title = "Distribution of Artist's Spotify Followers", 
+       y = "Count",
+       x = "Number of Followers")
+```
+
+This is better. As we can see, very few artists have more than 10 million Spotify followers, so this is a select group of very successful artists. Even moreso, only 5 artists have more than 30 million Spotify followers. Let's look at what artists have the greatest number of followers.
+
+### Bivariate Analysis
+
+```{r}
+#| echo: false
+artists_info %>%
+  # rearranging so most followers are at the top
+  arrange(desc(followers)) %>%
+  distinct(followers, .keep_all = TRUE) %>% 
+  # selecting only the top 10 observations
+  slice_head(n = 10) %>% 
+  ggplot(aes(x = fct_reorder(artist, followers), y = followers)) +
+  geom_col(color = 'black',
+           fill = 'lightblue') +
+  coord_flip() + 
+  labs(title = "Artists with Most Followers on Spotify")
+```
+
+On Spotify, the artist with the most amount of followers is Ed Sheeran, who is not on the other charts or lists. A relevant thing to note is the fact that the Billboard Hot 100 as well as the Grammy Awards are awarded entirely in the US, whereas Spotify followers are global. So, while Ed Sheeran's music may not be the most popular in the United States, he seems to have a large global fanbase. Followed by Ed Sheeran in followers is Drake, then Rihanna, and Justin Bieber in fourth. Notable artists on other lists including Taylor Swift, Beyonce, Eminem, and Bruno Mars are also present on this graph. Next, let's look at the streams of the different artists.
+
+```{r}
+#| echo: false
+streams_charts <- spotify_charts %>% 
+  group_by(artists, name) %>% 
+  # finding unique artist & songs
+  distinct(name, artists, streams) %>% 
+  # finding actual number of streams each song by each artist has
+  slice_max(order_by = streams) %>% 
+  # grouping artists together
+  group_by(artists) %>% 
+  # adding artist's streams together
+  mutate(total_streams = sum(streams)) %>% 
+  # selecting just artist and streams
+  select(artists, total_streams) %>% 
+  distinct(artists, total_streams)
+
+streams_charts %>% 
+  filter(total_streams > 5e08) %>% 
+  ggplot(aes(x = fct_reorder(artists, total_streams), y = total_streams)) +
+  geom_col(color = 'black',
+           fill = 'lightblue') +
+  coord_flip() +
+  labs(title = "Artists with Most Spotify Streams",
+       x = "Total Number of Streams",
+       y = "Artist")
+```
+
+From this graph, Taylor Swift leads as the artist on Spotify with the most streams, and the only artist with over 2 billion streams. She's followed by Drake, then Ariana Grande and Bad Bummy, and The Weeknd in fifth. It's intriguing to see that although Ed Sheeran has the most Spotify followers, he is not in the top 5 artists with the most streams. This might imply that he has inactive followers, or people follow him but do not actually stream his music. On the other hand, while Taylor Swift does not have the most followers, she has the most streams, which might imply her music is more universal to people who aren't hardcore fans. Meanwhile, Drake stays consistent on Spotify with followers and streams.
+
+While there are some differences, it may be interesting to see if there actually is a relationship between the amount of Spotify followers and Spotify streams an artist has. To do this, we'd need to merge the data sets.
+
+```{r}
+#| echo: false
+spotify <- artists_info %>% 
+  inner_join(spotify_charts, c("artist" = "artists"))
+
+spotify %>%
+  group_by(artist, name) %>% 
+  # finding unique artist & songs
+  distinct(name, artist, streams, followers) %>% 
+  # finding actual number of streams each song by each artist has
+  slice_max(order_by = streams) %>% 
+  group_by(artist) %>% 
+  # adding artist's streams together
+  mutate(total_streams = sum(streams)) %>% 
+  # getting only the unique observations/removing duplicates
+  distinct(artist, total_streams, followers) %>% 
+  ggplot(aes(x = followers, y = total_streams)) +
+  geom_point() +
+  geom_smooth() + 
+  labs(title = "Relationship Between Spotify Followers and Total Streams",
+       y = "Total Streams",
+       x = "Amount of Followers")
+```
+
+While obviously there are some outliers, there does seem to be a relationship between the amount of Spotify followers an artist has, and the total number of streams. While the relationship isn't super strong, there are a lot of variables that could be at play, including inactive followers, fake accounts, and unintentional streams. Let's now take a quick look at the most streamed song of all time on Spotify.
+
+```{r}
+#| echo: false
+song_streams <- spotify_charts %>% 
+  # focusing on the US
+  filter(country == "us") %>% 
+  group_by(artists, name) %>% 
+  distinct(name, artists, streams) %>% 
+  # finding actual number of streams each song by each artist has
+  slice_max(order_by = streams) %>% 
+  # grouping artists together
+  group_by(name, artists) %>% 
+  # adding a song's streams together
+  mutate(total_streams = sum(streams)) %>% 
+  # selecting just song, artist, and streams
+  select(name, artists, total_streams) %>% 
+  distinct(artists, total_streams)
+
+song_streams %>% 
+  filter(total_streams > 2.5e7) %>% 
+  ggplot(aes(x = fct_reorder(paste(artists, name, 
+    sep = ' - '), total_streams), y = total_streams)) +
+  geom_col(color = "black", fill = "lightblue") +
+  coord_flip() +
+  labs(title = "Most Streamed Songs on Spotify on the Charts", 
+       y = "Number of Streams",
+       x = "Artist - Song") 
+```
+
+From this visual, the most streamed song on Spotify is Olivia Rodrigo's "good 4 u". This is pretty interesting since we have not heard or seen her success in the music industry thus far, across our metrics. Furthermore, only two other artists are on this visual twice: Drake and Taylor Swift. This really cements Taylor Swift and Drake as leading artist on Spotify. Rodrigo has only released one album, so it is incredibly impressive that she has so much success on Spotify. Additionally, Swift's Anti-Hero has the second most streams here, despite being out for a little over a month.
+
+### Multivariate Analysis
+Let's take a look to see if Spotify Charts and the Billboard Hot 100 have any commonalities and relationships. We can do this by seeing if, in a year, the artist who spent longest on the charts was the same for both.
+
+```{r}
+#| echo: false
+spotify_weeks <- spotify_charts %>%
+  # filtering just the US
+  filter(country == "us") %>% 
+  # extracting the year
+  mutate(year = year(date)) %>% 
+  group_by(artists, year) %>% 
+  count() %>% 
+  group_by(year) %>% 
+  # finding the song on it most
+  slice_max(order_by = n) %>% 
+  rename("Artist Who Spent Longest on Spotify Charts" = "artists")
+
+# songs that were on Billboard Hot 100 each year for the most amount of weeks
+billboard_weeks <- billboard_hot %>% 
+  mutate(year = year(week)) %>% 
+  group_by(year) %>% 
+  # finding the song with most weeks
+  slice_max(order_by = weeks_on_chart) %>% 
+  select(artist, name, year) %>% 
+  # deleting dupicates
+  distinct(artist) %>% 
+  rename("Artist Who Spent Longest on Billboard Hot 100" = "artist")
+
+spotify_billboard <- spotify_weeks %>% 
+  left_join(billboard_weeks, "year") %>% 
+  select(-c(n))
+
+as_tibble(spotify_billboard)
+
+```
+
+As we can see with this tibble, in a given year, the artist who spends the longest on the Spotify charts is not the same as the artist who spends the longest on the Billboard Hot 100. This demonstrates that the two charts of music runs independently, and are separate measures of success. One would assume that the Spotify charts rely more heavily on the active streams of a given song on Spotify, whereas Billboard takes other things into account. 
+
+## Top Artists
+Based on our analysis above of the data between the Billboard Hot 100, Grammy Awards, and Spotify Charts, it seems as though three musical artists stand out amongst the rest as the most successful: Drake, Rihanna, and Taylor Swift. Let's see if we can dive deeper into their contributions into the music industry. So far, we have seen their success as the lead singer and musicians on their music, but how about other ways of collaborating and creating meaningful contributions to the industry. Let's take a look at writing credits and features of these artists on the Billboard Hot 100.
+
+```{r}
+#| echo: false
+# not the most efficient way, but the way that worked for me
+# how many songs they have written on the Billboard Hot 100
+taylor <- billboard_hot %>% 
+  filter(str_detect(writers, pattern = "Taylor swift")) %>% 
+  filter(str_detect(artist, pattern = "Taylor Swift", negate = TRUE)) %>% 
+  distinct(name) %>% 
+  mutate(writer = "Taylor Swift",
+         count = n())
+
+drake <- billboard_hot %>% 
+  # filter(peak_pos < 50) %>% 
+  filter(str_detect(writers, pattern = "Drake")) %>% 
+  filter(str_detect(artist, pattern = "Drake", negate = TRUE)) %>%
+  distinct(name) %>% 
+  mutate(writer = "Drake",
+         count = n())
+
+rihanna <- billboard_hot %>% 
+  # filter(peak_pos < 50) %>% 
+  filter(str_detect(writers, pattern = "Rihanna")) %>% 
+  filter(str_detect(artist, pattern = "Rihanna", negate = TRUE)) %>% 
+  distinct(name) %>% 
+  mutate(writer = "Rihanna",
+         count = n())
+
+writing_hits <- taylor %>% 
+  full_join(drake) %>% 
+  full_join(rihanna) %>% 
+  distinct(writer, count)
+
+writing_hits %>% 
+  ggplot(aes(x = writer, y = count)) +
+  geom_col(color = "black", fill = "lightblue") +
+  labs(title = "# of Songs They Wrote on the Billboard Hot 100",
+       y = "Number of Songs",
+       x = "Artist")
+```
+
+As we can see in the visual, Drake seems to dominate with the amount of weeks a song he has written for someone else has been on the Billboard Hot 100. This shows that Drake is a big collaborator, and tends to write a lot of songs that we hear on the Billboard Hot 100. He is a rapper, so it makes sense he is constantly writing. Let's take a look at the Billboard songs that feature our top artists.
+
+```{r}
+#| echo: false
+# how many songs they are featured on is on the Billboard Hot 100
+
+# not the most efficient way, but the way that worked best for me
+taylor_featured <- billboard_hot %>% 
+  # finding what songs she has writing credits on
+  filter(str_detect(features, pattern = "Taylor Swift")) %>% 
+  # removing her own songs, to focus on songs she writes for others
+  filter(str_detect(artist, pattern = "Taylor Swift", negate = TRUE)) %>% 
+  # finding distinct songs
+  distinct(name) %>% 
+  # counting how many it is
+  mutate(featured = "Taylor Swift",
+        count = n())
+
+drake_featured <- billboard_hot %>% 
+  # filter(peak_pos < 50) %>% 
+  filter(str_detect(features, pattern = "Drake")) %>% 
+  filter(str_detect(artist, pattern = "Drake", negate = TRUE)) %>%
+  distinct(name) %>% 
+  mutate(featured = "Drake",
+         count = n())
+
+rihanna_featured <- billboard_hot %>% 
+  # filter(peak_pos < 50) %>% 
+  filter(str_detect(features, pattern = "Rihanna")) %>% 
+  filter(str_detect(artist, pattern = "Rihanna", negate = TRUE)) %>% 
+  distinct(name) %>% 
+  mutate(featured = "Rihanna",
+         count = n())
+
+featured_hits <- taylor_featured %>% 
+  full_join(drake_featured) %>% 
+  full_join(rihanna_featured) %>% 
+  distinct(featured, count)
+
+featured_hits %>% 
+  ggplot(aes(x = featured, y = count)) +
+  geom_col(color = "black", fill = "lightblue") +
+  labs(title = "# of Songs They're Featured on the Billboard Hot 100",
+       y = "Number of Songs",
+       x = "Artist")
+```
+Again, Drake seems to have the most songs he is featured on hit the Billboard Hot 100, out of our three leading artists, with nearly 60 features making it onto the charts. On the other hand, Rihanna and Swift have 14 and 3 collectively. This might make sense since Drake is a rapper and is usually featured on other songs. On the other hand, Rihanna and Swift are large pop singers, who focus on their own music. Let's turn to the spotify charts to see who leads there. 
+
+```{r}
+#| echo: false
+top_songs <- spotify_charts %>% 
+  # filtering top artists
+  filter(artists == "Taylor Swift"|artists =="Rihanna"|artists =="Drake") %>% 
+  # grouping artists and songs
+  group_by(name, artists) %>% 
+  # finding top streams
+  slice_max(order_by = streams) %>% 
+  group_by(artists) %>% 
+  mutate(total_streams = sum(streams)) %>% 
+  slice_head(n = 5)
+
+top_songs %>%  
+   ggplot(aes(x = fct_reorder(paste(artists, name, 
+    sep = ' - '), streams), y = streams)) +
+  geom_col(color = "black", fill = "lightblue") +
+  coord_flip() +
+  labs(title = "# Streams of Artist's Top 5 Most Streamed Songs on Spotify Charts", 
+       y = "Number of Streams",
+       x = "Artist - Song") 
+
+spotify_charts %>% 
+  filter(artists == "Taylor Swift"|artists =="Rihanna"|artists =="Drake") %>% 
+  group_by(name, artists) %>% 
+  slice_max(order_by = streams) %>% 
+  group_by(artists) %>% 
+  mutate(total_streams = sum(streams)) %>% 
+  distinct(artists, total_streams) %>% 
+  ggplot(aes(x= artists, y = total_streams)) +
+  geom_col(color = "black", 
+           fill = "lightblue") +
+  labs(title = "Artist's Total # of Streams on Spotify Charts", 
+       y = "Number of Streams",
+       x = "Artist") 
+  
+```
+When it comes to streaming, it is clear that Taylor Swift is the clear winner. In total, she has over 2 billion streams, while Drake has just over 1.6 billion, and Rihanna with around 127 million. Additionally, while breaking it down to their most streamed songs, Taylor Swift's top 4 songs with the most amount of streams beat Rihanna and Drake's top song.
+
+## Findings & Conclusion
+
+Throughout this exploratory data analysis, we've used data transformation and visualization techniques to search through data from the Billboard Hot 100, the Recording Academy's Grammy Awards, and Spotify Charts to see if there were any patterns or commonalities between these various metrics of a successful artist. On the Billboard Hot 100, we found that Drake, Taylor Swift, and Rihanna are the top 3 artists whose songs have spent the most amount of time on the charts, while the Glee Cast, Drake, and Taylor Swift are the top 3 artists who has had the most amount of songs hit the charts, overall. Looking at the Grammys, Adele, Eminem, U2, and Alicia Keys lead the pack with the most Grammys won, while Drake and Rihanna are not even on the list of top artists who have won. On Spotify, Ed Sheeran may take the crown for most followers, but when it comes to real streams, Taylor Swift is the leading artist in that arena. 
+
+We cross referenced our relational data and found that there is not much overlap between any of the three charts/awards, so it is clear that if an artist is doing well in one area, it does not necessarily mean they are doing well in another. However, we found that some artists did in fact find success across the different areas. Drake, Rihanna, and Taylor Swift rose above the rest in particular when it came to charting, streaming, and awards. We found that Drake writes a ton of music and is featured on many songs that reach the Billboard Hot 100, and some would say he has a golden touch. When investigating more in-depth on Spotify, we found that Swift dominates in streaming, emphasizing her strong and impassioned fan base. It is because of this, and her success at the Grammy Awards, that one could conclude that Swift encompasses what it means to be a successful artist. Her music is consistently on the charts, she has won multiple Grammy Awards, and her streaming is unmatched.
+
+To quote Barbara Walters (2014), "Taylor Swift is the music industry."
+
+This EDA provides a lot of opportunities for further investigation. With our data sets, one could explore Swift's discography specifically, including which of her songs were her biggest hits and when. It would also be interesting to see if there is a common trend between all of her songs that are her most successful. Furthermore, success could also be measured in other ways: ticket sales/revenue, social media following, press coverage, and Q score. Ultimately, success of an artist can not be simply measured nor defined, but data allows us to visualize and analyze the factors, trends, and relations that go into the music industry and gaining success within it. 

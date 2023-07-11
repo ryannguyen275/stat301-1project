@@ -1,0 +1,82 @@
+---
+title: "Final Project Check-Up Memo"
+subtitle: "Data Science 1 with R (STAT 301-1)"
+author: "Ryan Nguyen"
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    code-fold: show
+    link-external-newwindow: true
+    
+execute:
+  warning: false
+  
+from: markdown+emoji  
+---
+
+## Load Packages
+
+```{r}
+library(tidyverse, quietly = T)
+library(skimr, quietly = T)
+library(lubridate, quietly = T)
+library(maps)
+```
+
+## Demonstartion of Progress
+
+```{r}
+charts <- read_csv("data/charts.csv", show_col_types = FALSE)
+grammy_albums <- read_csv("data/grammy_albums.csv", show_col_types = FALSE)
+grammy_songs <- read_csv("data/grammy_songs.csv", show_col_types = FALSE)
+billboard100 <- read_csv("data/billboard100.csv", show_col_types = FALSE)
+artists <- read_csv("data/artistDF.csv", show_col_types = FALSE)
+```
+
+```{r}
+taylor_charts <- charts %>% 
+  filter(str_detect(artists, pattern = "Taylor Swift")) %>% 
+  mutate(name = str_replace(name, "Taylor's Version", "TV"),
+         name = str_replace(name, "From The Vault", "FTV")) %>% 
+  select(name, artists, country, date, position, streams)
+
+taylor_charts
+
+taylor_charts %>% 
+  filter(streams > 3000000, year(date) > 2020) %>% 
+  ggplot(aes(x = name, y = streams)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Taylor's Most Popular Songs After '20", x = "Song Title", y = "Spotify Streams")
+
+```
+
+```{r}
+billboard100 %>% 
+  filter(Artists == "Taylor Swift", year(Week) > 2015) %>% 
+  ggplot(aes(x = Week, y = Weekly.rank, color = Name)) +
+  geom_point() +
+  scale_y_reverse() +
+  labs(title = "Taylor Swift Songs Billboard Spots After 2015",
+       x = "Date",
+       y = "Weekly Rank") 
+```
+
+```{r}
+charts2<- charts %>% 
+  mutate(artists <- str_replace(artists, "\\[\\'.*\\'\\]", "r"))
+
+charts2
+```
+
+## Assessment of Progress
+
+After many hours, I am mostly satisfied with my progress. I am really excited about the various data sets that I've pulled and am satisfied with the analysis and plots that I have created so far. I think the data sets allow for a lot of different explorations, and I think my next step is to make a list of all of the analysis I want to specifically explore. I'm interested in learning more about the correlation between the billboard charts, awards, and spotify charts, and how the different platforms may or may not affect one another for specific artists or songs. A roadblock/issue I am running into is the fact that the artists in the `charts` data set is listed as "\['Artist Name'\]" whereas they are listed as "Artist Name" in the `billboard100` data set. So, when I attempt to merge the two data sets, they don't merge since the strings are slightly different. I am continually trying to fix this by using `str_replace` to edit the artists' names in `charts`, or seeing if there is code to partially match the names. As I work more and more with the data, I am fascinated by how many observations overtime has been collected, and I am excited to explore what more I can do with it.
+
+## Demonstration of Organization
+
+Below is a screenshot of my folder with the RStudio project.
+
+![](images/Screen%20Shot%202022-11-19%20at%204.02.35%20PM.png)

@@ -1,0 +1,29 @@
+---
+title: "Data Memo"
+subtitle: "Data Science 1 with R (STAT 301-1)"
+author: "Ryan Nguyen"
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    code-fold: show
+    link-external-newwindow: true
+    
+execute:
+  warning: false
+  
+from: markdown+emoji  
+---
+
+## Data Source
+
+The data source that I'll be using is the Spotify Tracks Chart [dataset](https://www.kaggle.com/datasets/jfreyberg/spotify-chart-data) (2014-2022). This large data set features weekly Spotify charts data, with 10 variables. The variables include `track_id` (the Spotify unique track ID), `name` (name of the song), `country` (country code of the country for the chart entry), `date` (date the song appeared in the countries' charts), `position` (position the track appeared in the charts), `streams` (number of streams until the date), `artists` (artists involved in creating the track), `artist_genres` (genres of the artists featured), `duration` (duration of track in milliseconds), and `explicit` (whether the track has explicit language or not). I was hoping on using some relational data with a Billboard data set found [here](https://www.kaggle.com/datasets/danield2255/data-on-songs-from-billboard-19992019). that also has data regarding Grammy awards, album certifications, weekly streams on Spotify, etc, and seeing relationships and patterns between the two. Since the usability of this data set is 7.35 and I'd have to do a lot of joining and merging, I'm hoping this increases the complexity and makes the EDA sufficient. I'm also thinking about using this data set [here](https://www.kaggle.com/datasets/PromptCloudHQ/taylor-swift-song-lyrics-from-all-the-albums) that has all of her song lyrics from all albums (minus Midnights) and looking at trends in what lyrics are her most popular/what wins awards/what makes it on top of the charts, etc.
+
+### Why This Data
+
+When looking for data sets for this project, I knew I wanted one that had a lot of different opportunities for lots of interesting explorations. Music and pop culture has always been one of my passions, so on Kaggle, I refined my search to arts and entertainment and found this data set. It has a thousands of observations, and I thought it'd be interesting to dive deep into the relationships of the most popular artists, songs, what was trending when, what artists are popular in what countries and when, what genres are popular in what regions of the world and when, etc. I thought there were so many possibilities to see the data and analyze the data, and I'd be interested in using map visualizations as well.
+
+### Potential Data Issues
+
+The main data issue that I am noticing is there is some missing data, particularly in the names of the tracks. Additionally, with over 626k observations, I will need to be very deliberate in filtering and finding observations that are helpful and informative in the exploratory data analysis.
